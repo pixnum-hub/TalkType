@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TalkType - Ultimate Voice to Text App</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#4f46e5">
+<style>
+:root{--bg:#eef2ff;--card:#fff;--text:#111827;--accent:#4f46e5}
+body.dark{--bg:#020617;--card:#0f172a;--text:#e5e7eb;--accent:#22c55e}
+*{box-sizing:border-box;font-family:system-ui}
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);color:var(--text)}
+.app{width:95%;max-width:560px;background:var(--card);padding:18px;border-radius:18px;box-shadow:0 20px 40px rgba(0,0,0,.25)}
+h1{text-align:center}
+textarea{width:100%;height:180px;padding:12px;font-size:16px;border-radius:12px;border:1px solid #c7d2fe;resize:none}
+.row{display:flex;gap:10px;margin-top:10px;flex-wrap:wrap}
+button,select{flex:1;padding:12px;border-radius:12px;border:none;font-size:15px;cursor:pointer}
+.start{background:#16a34a;color:#fff}.stop{background:#dc2626;color:#fff}
+.copy{background:#2563eb;color:#fff}.clear{background:#6b7280;color:#fff}
+.download{background:#9333ea;color:#fff}.tts{background:#f59e0b;color:#fff}
+.toggle{background:var(--accent);color:#fff}.save{background:#0ea5e9;color:#fff}
+.status{text-align:center;font-size:14px;margin-top:8px}
+.history{margin-top:10px;font-size:13px}
+.history div{background:#e5e7eb;padding:6px;border-radius:8px;margin-top:4px;cursor:pointer}
+body.dark .history div{background:#1f2933}
+</style>
+</head>
+<body>
+<div class="app">
+<h1>🎙 TalkType</h1>
+<select id="language">
+<option value="en-IN">English (India)</option><option value="en-US">English (US)</option>
+<option value="hi-IN">Hindi</option><option value="bn-IN">Bengali</option>
+<option value="ta-IN">Tamil</option><option value="te-IN">Telugu</option>
+<option value="ml-IN">Malayalam</option><option value="mr-IN">Marathi</option>
+<option value="gu-IN">Gujarati</option><option value="kn-IN">Kannada</option>
+</select>
+<textarea id="output" placeholder="Press START and speak..."></textarea>
+<div class="row"><button class="start" onclick="startListening()">Start</button><button class="stop" onclick="stopListening()">Stop</button></div>
+<div class="row"><button class="copy" onclick="copyText()">Copy</button><button class="clear" onclick="clearText()">Clear</button></div>
+<div class="row"><button class="download" onclick="downloadText()">Download</button><button class="tts" onclick="speakText()">Speak</button></div>
+<div class="row"><button class="save" onclick="saveNote()">Save Note</button><button class="toggle" onclick="toggleDark()">🌙 / ☀️</button></div>
+<div class="status" id="status">Idle</div>
+<div class="history" id="history"></div>
+</div>
+<script>
+let recognition,listening=false;const out=output;
+if(window.SpeechRecognition||window.webkitSpeechRecognition){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ recognition=new SR();recognition.continuous=true;recognition.interimResults=true;
+ recognition.onresult=e=>{let t='';for(let i=e.resultIndex;i<e.results.length;i++)t+=e.results[i][0].transcript;out.value=autoPunct(t)};
+ recognition.onstart=()=>status('Listening...');recognition.onend=()=>status('Stopped');
+}else alert('Speech Recognition not supported');
+function startListening(){if(!listening){recognition.lang=language.value;recognition.start();listening=true}}
+function stopListening(){recognition.stop();listening=false}
+function autoPunct(t){return t.replace(/\b(i)\b/g,'I').replace(/\s*(\n|$)/g,'. ')}
+function copyText(){out.select();document.execCommand('copy');status('Copied')}
+function clearText(){out.value=''}
+function downloadText(){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out.value],{type:'text/plain'}));a.download='voice.txt';a.click()}
+function speakText(){speechSynthesis.speak(new SpeechSynthesisUtterance(out.value))}
+function toggleDark(){document.body.classList.toggle('dark')}
+function status(m){document.getElementById('status').innerText=m}
+function saveNote(){if(!out.value)return;let h=JSON.parse(localStorage.getItem('notes')||'[]');h.unshift(out.value);localStorage.setItem('notes',JSON.stringify(h));loadHistory();status('Saved')}
+function loadHistory(){const h=JSON.parse(localStorage.getItem('notes')||'[]');history.innerHTML='<b>History</b>';h.slice(0,5).forEach(n=>{const d=document.createElement('div');d.textContent=n.slice(0,80);d.onclick=()=>out.value=n;history.appendChild(d)})}
+loadHistory();
+if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js')}
+</script>
+</body>
+</html>
